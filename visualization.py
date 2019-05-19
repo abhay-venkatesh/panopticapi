@@ -43,16 +43,14 @@ for image_info in coco_d['images']:
     if image_info['id'] == ann['image_id']:
         try:
             img = np.array(
-                Image.open(os.path.join(img_folder, image_info['file_name']))
-            )
+                Image.open(os.path.join(img_folder, image_info['file_name'])))
         except:
             print("Undable to find correspoding input image.")
         break
 
 segmentation = np.array(
     Image.open(os.path.join(segmentations_folder, ann['file_name'])),
-    dtype=np.uint8
-)
+    dtype=np.uint8)
 segmentation_id = rgb2id(segmentation)
 # find segments boundaries
 boundaries = find_boundaries(segmentation_id, mode='thick')

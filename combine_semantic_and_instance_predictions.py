@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''
-The script uses a simple procedure to combine semantic segmentation and instance
+The script uses a simple procedure to combine semantic segmentation and
+ instance
 segmentation predictions. The procedure is described in section 7 of the
 panoptic segmentation paper https://arxiv.org/pdf/1801.00868.pdf.
 
@@ -12,19 +13,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import os, sys
-import argparse
-import numpy as np
 from collections import defaultdict
-import json
-import time
-import multiprocessing
-import copy
-
 from utils import IdGenerator, id2rgb, save_json
+import argparse
+import copy
+import json
+import multiprocessing
+import numpy as np
+import os
+import sys
+import time
 
 try:
-    import PIL.Image     as Image
+    import PIL.Image as Image
 except Exception:
     print("Failed to import the image processing packages.")
     sys.exit(-1)
@@ -34,12 +35,13 @@ try:
     # sys.path.append('./cocoapi-master/PythonAPI/')
     from pycocotools import mask as COCOmask
 except Exception:
-    raise Exception("Please install pycocotools module from https://github.com/cocodataset/cocoapi")
+    raise Exception("Please install pycocotools module from" +
+                    "https://github.com/cocodataset/cocoapi")
 
 
-def combine_to_panoptic_single_core(proc_id, img_ids, img_id2img, inst_by_image,
-                                    sem_by_image, segmentations_folder, overlap_thr,
-                                    stuff_area_limit, categories):
+def combine_to_panoptic_single_core(
+        proc_id, img_ids, img_id2img, inst_by_image, sem_by_image,
+        segmentations_folder, overlap_thr, stuff_area_limit, categories):
     panoptic_json = []
     id_generator = IdGenerator(categories)
 
@@ -47,11 +49,10 @@ def combine_to_panoptic_single_core(proc_id, img_ids, img_id2img, inst_by_image,
         img = img_id2img[img_id]
 
         if idx % 100 == 0:
-            print('Core: {}, {} from {} images processed.'.format(proc_id, idx,
-                                                                  len(img_ids)))
+            print('Core: {}, {} from {} images processed.'.format(
+                proc_id, idx, len(img_ids)))
 
-        pan_segm_id = np.zeros((img['height'],
-                                img['width']), dtype=np.uint32)
+        pan_segm_id = np.zeros((img['height'], img['width']), dtype=np.uint32)
         used = None
         annotation = {}
         try:
@@ -71,8 +72,8 @@ def combine_to_panoptic_single_core(proc_id, img_ids, img_id2img, inst_by_image,
                 used = copy.deepcopy(ann['segmentation'])
             else:
                 intersect = COCOmask.area(
-                    COCOmask.merge([used, ann['segmentation']], intersect=True)
-                )
+                    COCOmask.merge([used, ann['segmentation']],
+                                   intersect=True))
             if intersect / area > overlap_thr:
                 continue
             used = COCOmask.merge([used, ann['segmentation']], intersect=False)
@@ -103,25 +104,25 @@ def combine_to_panoptic_single_core(proc_id, img_ids, img_id2img, inst_by_image,
         panoptic_json.append(annotation)
 
         Image.fromarray(id2rgb(pan_segm_id)).save(
-            os.path.join(segmentations_folder, annotation['file_name'])
-        )
+            os.path.join(segmentations_folder, annotation['file_name']))
 
     return panoptic_json
 
 
-def combine_to_panoptic_multi_core(img_id2img, inst_by_image,
-                                   sem_by_image, segmentations_folder, overlap_thr,
+def combine_to_panoptic_multi_core(img_id2img, inst_by_image, sem_by_image,
+                                   segmentations_folder, overlap_thr,
                                    stuff_area_limit, categories):
     cpu_num = multiprocessing.cpu_count()
     img_ids_split = np.array_split(list(img_id2img), cpu_num)
-    print("Number of cores: {}, images per core: {}".format(cpu_num, len(img_ids_split[0])))
+    print("Number of cores: {}, images per core: {}".format(
+        cpu_num, len(img_ids_split[0])))
     workers = multiprocessing.Pool(processes=cpu_num)
     processes = []
     for proc_id, img_ids in enumerate(img_ids_split):
-        p = workers.apply_async(combine_to_panoptic_single_core,
-                                (proc_id, img_ids, img_id2img, inst_by_image,
-                                 sem_by_image, segmentations_folder, overlap_thr,
-                                 stuff_area_limit, categories))
+        p = workers.apply_async(
+            combine_to_panoptic_single_core,
+            (proc_id, img_ids, img_id2img, inst_by_image, sem_by_image,
+             segmentations_folder, overlap_thr, stuff_area_limit, categories))
         processes.append(p)
     panoptic_json = []
     for p in processes:
@@ -150,7 +151,8 @@ def combine_predictions(semseg_json_file, instseg_json_file, images_json_file,
     if segmentations_folder is None:
         segmentations_folder = panoptic_json_file.rsplit('.', 1)[0]
     if not os.path.isdir(segmentations_folder):
-        print("Creating folder {} for panoptic segmentation PNGs".format(segmentations_folder))
+        print("Creating folder {} for panoptic segmentation PNGs".format(
+            segmentations_folder))
         os.mkdir(segmentations_folder)
 
     print("Combining:")
@@ -163,7 +165,8 @@ def combine_predictions(semseg_json_file, instseg_json_file, images_json_file,
     print("Panoptic segmentations:")
     print("\tSegmentation folder: {}".format(segmentations_folder))
     print("\tJSON file: {}".format(panoptic_json_file))
-    print("List of images to combine is takes from {}".format(images_json_file))
+    print(
+        "List of images to combine is takes from {}".format(images_json_file))
     print('\n')
 
     inst_by_image = defaultdict(list)
@@ -172,7 +175,8 @@ def combine_predictions(semseg_json_file, instseg_json_file, images_json_file,
             continue
         inst_by_image[inst['image_id']].append(inst)
     for img_id in inst_by_image.keys():
-        inst_by_image[img_id] = sorted(inst_by_image[img_id], key=lambda el: -el['score'])
+        inst_by_image[img_id] = sorted(
+            inst_by_image[img_id], key=lambda el: -el['score'])
 
     sem_by_image = defaultdict(list)
     for sem in sem_results:
@@ -181,14 +185,8 @@ def combine_predictions(semseg_json_file, instseg_json_file, images_json_file,
         sem_by_image[sem['image_id']].append(sem)
 
     panoptic_json = combine_to_panoptic_multi_core(
-        img_id2img,
-        inst_by_image,
-        sem_by_image,
-        segmentations_folder,
-        overlap_thr,
-        stuff_area_limit,
-        categories
-    )
+        img_id2img, inst_by_image, sem_by_image, segmentations_folder,
+        overlap_thr, stuff_area_limit, categories)
 
     with open(images_json_file, 'r') as f:
         coco_d = json.load(f)
@@ -204,38 +202,57 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script uses a simple procedure to combine semantic \
         segmentation and instance segmentation predictions. See this \
-        file's head for more information."
-    )
-    parser.add_argument('--semseg_json_file', type=str,
-                        help="JSON file with semantic segmentation predictions")
-    parser.add_argument('--instseg_json_file', type=str,
-                        help="JSON file with instance segmentation predictions")
-    parser.add_argument('--images_json_file', type=str,
-                        help="JSON file with correponding image set information")
-    parser.add_argument('--categories_json_file', type=str,
-                        help="JSON file with Panoptic COCO categories information",
-                        default='./panoptic_coco_categories.json')
-    parser.add_argument('--panoptic_json_file', type=str,
-                        help="JSON file with resulting COCO panoptic format prediction")
+        file's head for more information.")
     parser.add_argument(
-        '--segmentations_folder', type=str, default=None, help="Folder with \
-         panoptic COCO format segmentations. Default: X if panoptic_json_file is \
-         X.json"
+        '--semseg_json_file',
+        type=str,
+        help="JSON file with semantic segmentation predictions")
+    parser.add_argument(
+        '--instseg_json_file',
+        type=str,
+        help="JSON file with instance segmentation predictions")
+    parser.add_argument(
+        '--images_json_file',
+        type=str,
+        help="JSON file with correponding image set information")
+    parser.add_argument(
+        '--categories_json_file',
+        type=str,
+        help="JSON file with Panoptic COCO categories information",
+        default='./panoptic_coco_categories.json')
+    parser.add_argument(
+        '--panoptic_json_file',
+        type=str,
+        help="JSON file with resulting COCO panoptic format prediction")
+    parser.add_argument(
+        '--segmentations_folder',
+        type=str,
+        default=None,
+        help="Folder with \
+         panoptic COCO format segmentations. Default: X if panoptic_json_file \
+         is X.json")
+    parser.add_argument(
+        '--confidence_thr',
+        type=float,
+        default=0.5,
+        help="Predicted segments with smaller confidences than the threshold \
+            are filtered out")
+    parser.add_argument(
+        '--overlap_thr',
+        type=float,
+        default=0.5,
+        help="Segments that have higher that the threshold ratio of \
+                        their area being overlapped by segments with higher \
+                            confidence are filtered out")
+    parser.add_argument(
+        '--stuff_area_limit',
+        type=float,
+        default=64 * 64,
+        help="Stuff segments with area smaller that the limit are filtered out"
     )
-    parser.add_argument('--confidence_thr', type=float, default=0.5,
-                        help="Predicted segments with smaller confidences than the threshold are filtered out")
-    parser.add_argument('--overlap_thr', type=float, default=0.5,
-                        help="Segments that have higher that the threshold ratio of \
-                        their area being overlapped by segments with higher confidence are filtered out")
-    parser.add_argument('--stuff_area_limit', type=float, default=64*64,
-                        help="Stuff segments with area smaller that the limit are filtered out")
     args = parser.parse_args()
-    combine_predictions(args.semseg_json_file,
-                        args.instseg_json_file,
-                        args.images_json_file,
-                        args.categories_json_file,
-                        args.segmentations_folder,
-                        args.panoptic_json_file,
-                        args.confidence_thr,
-                        args.overlap_thr,
+    combine_predictions(args.semseg_json_file, args.instseg_json_file,
+                        args.images_json_file, args.categories_json_file,
+                        args.segmentations_folder, args.panoptic_json_file,
+                        args.confidence_thr, args.overlap_thr,
                         args.stuff_area_limit)

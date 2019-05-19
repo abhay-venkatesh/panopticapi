@@ -24,14 +24,17 @@ def get_traceback(f):
 
 class IdGenerator():
     '''
-    The class is designed to generate unique IDs that have meaningful RGB encoding.
-    Given semantic category unique ID will be generated and its RGB encoding will
+    The class is designed to generate unique IDs that have meaningful RGB
+     encoding.
+    Given semantic category unique ID will be generated and its RGB encoding
+     will
     have color close to the predefined semantic category color.
     The RGB encoding used is ID = R * 256 * G + 256 * 256 + B.
     Class constructor takes dictionary {id: category_info}, where all semantic
     class ids are presented and category_info record is a dict with fields
     'isthing' and 'color'
     '''
+
     def __init__(self, categories):
         self.taken_colors = set([0, 0, 0])
         self.categories = categories
@@ -41,9 +44,8 @@ class IdGenerator():
 
     def get_color(self, cat_id):
         def random_color(base, max_dist=30):
-            new_color = base + np.random.randint(low=-max_dist,
-                                                 high=max_dist+1,
-                                                 size=3)
+            new_color = base + np.random.randint(
+                low=-max_dist, high=max_dist + 1, size=3)
             return tuple(np.maximum(0, np.minimum(255, new_color)))
 
         category = self.categories[cat_id]
@@ -74,7 +76,8 @@ def rgb2id(color):
     if isinstance(color, np.ndarray) and len(color.shape) == 3:
         if color.dtype == np.uint8:
             color = color.astype(np.int32)
-        return color[:, :, 0] + 256 * color[:, :, 1] + 256 * 256 * color[:, :, 2]
+        return color[:, :,
+                     0] + 256 * color[:, :, 1] + 256 * 256 * color[:, :, 2]
     return int(color[0] + 256 * color[1] + 256 * 256 * color[2])
 
 
